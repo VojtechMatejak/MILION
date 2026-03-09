@@ -10,12 +10,16 @@ load_dotenv()
 
 app = FastAPI()
 
-# Nastavení Gemini
+# OPRAVA TADY: Nejdřív zkusíme vzít klíč z nastavení Renderu, 
+# pokud tam není, použijeme ten tvůj přímo.
 api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    api_key = "AIzaSyCCN6wiTllhBPtGR8G4E-TS1wql0zKPkuI"
+
 genai.configure(api_key=api_key)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-# Nastavení šablon
+# Nastavení šablon - ujisti se, že máš složku templates
 templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
@@ -35,10 +39,9 @@ async def chat(request: Request):
         return {"reply": response.text}
     except Exception as e:
         print(f"Chyba: {e}")
-        return JSONResponse(content={"reply": "AI má momentálně pauzu, zkus to za vteřinu."}, status_code=500)
+        return JSONResponse(content={"reply": f"Chyba na serveru: {str(e)}"}, status_code=500)
 
 if __name__ == "__main__":
     import uvicorn
-    # Render potřebuje port z proměnné prostředí
     port = int(os.environ.get("PORT", 10000))
     uvicorn.run(app, host="0.0.0.0", port=port)
