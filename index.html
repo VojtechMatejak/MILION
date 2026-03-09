@@ -5,50 +5,61 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MILION AI</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; }
-        h1 { margin-top: 20px; color: #00ff88; }
-        #chat-box { width: 90%; max-width: 600px; height: 50vh; border: 1px solid #333; overflow-y: auto; padding: 20px; background: #1e1e1e; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 20px; }
-        .msg { margin: 10px 0; padding: 12px; border-radius: 10px; max-width: 80%; line-height: 1.4; }
-        .user { background: #007bff; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 2px; }
-        .bot { background: #333; align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid #444; }
-        #input-area { display: flex; width: 90%; max-width: 600px; gap: 10px; padding-bottom: 20px; }
-        input { flex: 1; padding: 15px; border-radius: 10px; border: none; background: #2a2a2a; color: white; outline: none; }
-        button { padding: 15px 25px; background: #00ff88; color: black; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:hover { background: #00cc6e; transform: scale(1.05); }
+        body { background-color: #0e0e0e; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; height: 100vh; margin: 0; }
+        #chat-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .message { padding: 10px 15px; border-radius: 15px; max-width: 80%; line-height: 1.4; }
+        .user { background: #333; align-self: flex-end; }
+        .ai { background: #007bff; align-self: flex-start; }
+        #input-container { padding: 20px; background: #1a1a1a; display: flex; gap: 10px; border-top: 1px solid #333; }
+        input { flex: 1; padding: 12px; border-radius: 5px; border: none; background: #2a2a2a; color: #fff; outline: none; }
+        button { padding: 10px 20px; border-radius: 5px; border: none; background: #007bff; color: #fff; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        h1 { text-align: center; color: #555; font-size: 1.2rem; margin: 10px 0; }
     </style>
 </head>
 <body>
-    <h1>MILION AI 🚀</h1>
-    <div id="chat-box" style="display: flex; flex-direction: column;"></div>
-    <div id="input-area">
-        <input type="text" id="user-input" placeholder="Napiš zprávu..." onkeypress="if(event.key==='Enter') sendMessage()">
-        <button onclick="sendMessage()">Odeslat</button>
+    <h1>MILION AI SYSTEM v1.0</h1>
+    <div id="chat-container">
+        <div class="message ai">Systém připraven. Jak ti můžu dnes pomoct vybudovat impérium?</div>
+    </div>
+    <div id="input-container">
+        <input type="text" id="user-input" placeholder="Napiš zprávu...">
+        <button onclick="sendMessage()">ODESLAT</button>
     </div>
 
     <script>
         async function sendMessage() {
             const input = document.getElementById('user-input');
-            const chatBox = document.getElementById('chat-box');
+            const container = document.getElementById('chat-container');
             const message = input.value.trim();
             if (!message) return;
 
-            chatBox.innerHTML += `<div class="msg user">${message}</div>`;
+            // Přidat zprávu uživatele na web
+            container.innerHTML += `<div class="message user">${message}</div>`;
             input.value = '';
-            chatBox.scrollTop = chatBox.scrollHeight;
+            container.scrollTop = container.scrollHeight;
 
             try {
+                // Poslat zprávu na tvůj server na Renderu
                 const response = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: message })
                 });
                 const data = await response.json();
-                chatBox.innerHTML += `<div class="msg bot">${data.reply}</div>`;
+                
+                // Přidat odpověď AI
+                container.innerHTML += `<div class="message ai">${data.reply}</div>`;
+                container.scrollTop = container.scrollHeight;
             } catch (err) {
-                chatBox.innerHTML += `<div class="msg bot" style="color: #ff4444;">Chyba: Server neodpovídá. Zkus to za chvíli.</div>`;
+                container.innerHTML += `<div class="message ai" style="color:red">Chyba spojení: ${err}</div>`;
             }
-            chatBox.scrollTop = chatBox.scrollHeight;
         }
+
+        // Odesílání Enterem
+        document.getElementById('user-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') sendMessage();
+        });
     </script>
 </body>
 </html>
