@@ -1,39 +1,46 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from groq import Groq
-import uvicorn
-import re
+import os
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+import google.generativeai as genai
+from dotenv import load_dotenv
 
-client = Groq(api_key="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")
-
-CONFIG = {
-    "jmeno_bota": "Zákaznická podpora 24/7",
-    "barva_hlavni": "#a855f7", 
-    "uvitaci_zprava": "Dobrý den! Jsem váš automatizovaný asistent. Jak vám mohu dnes pomoci?",
-    "instrukce": "Jsi profesionální zákaznická podpora pro firmu AI Servis. Odpovídej věcně, srozumitelně a česky. Tvým úkolem je pomoci zákazníkovi a v případě zájmu o naše služby získat jeho e-mail.",
-    "znalosti": "Firma: AI Servis. Služby: Implementace AI asistentů, automatizace zákaznické podpory a digitalizace procesů. Kontakt: info@aiservis.cz. Ceník: Individuální podle náročnosti."
-}
-
-chat_history = [{"role": "system", "content": f"{CONFIG['instrukce']} Znalosti: {CONFIG['znalosti']}"}]
+# Načtení klíčů (pro lokální testování z .env, na Renderu z Environment Variables)
+load_dotenv()
 
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-@app.get("/")
-def read_index(): return FileResponse('index.html')
+# Nastavení Gemini motoru
+api_key = os.getenv("AIzaSyCCN6wiTllhBPtGR8G4E-TS1wql0zKPkuI")
+genai.configure(api_key=api_key)
+model = genai.GenerativeModel('gemini-1.5-flash')
 
-@app.get("/config")
-def get_config(): return CONFIG
+# Nastavení složky pro HTML (předpokládám, že máš složku 'templates')
+templates = Jinja2Templates(directory="templates")
 
-@app.get("/ask")
-def ask(question: str):
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    # Tohle zobrazí tvou hlavní stránku index.html
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.post("/chat")
+async def chat(request: Request):
     try:
-        chat_history.append({"role": "user", "content": question})
-        completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=chat_history)
-        odpoved = completion.choices[0].message.content
-        chat_history.append({"role": "assistant", "content": odpoved})
-        return {"ai_odpoved": odpoved}
-    except Exception as e: return {"chyba": str(e)}
+        data = await request.json()
+        user_message = data.get("message", "")
+        
+        if not user_message:
+            return JSONResponse(content={"reply": "Nenapsal jsi žádnou zprávu."}, status_code=400)
 
-if __name__ == "__main__": uvicorn.run(app, host="127.0.0.1", port=8000)
+        # Generování odpovědi od Gemini
+        response = model.generate_content(user_message)
+        
+        return {"reply": response.text}
+    except Exception as e:
+        return JSONResponse(content={"reply": f"Chyba na straně AI: {str(e)}"}, status_code=500)
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
