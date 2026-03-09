@@ -7,7 +7,7 @@ import google.generativeai as genai
 
 app = FastAPI()
 
-# Povolení přístupu (CORS)
+# Povolení přístupu pro externí weby (důležité pro prodej klientům)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,16 +15,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# NASTAVENÍ TVOJEHO KLÍČE
-api_key = "AIzaSyCCN6wiTllhBPtGR8G4E-TS1wql0zKPkuI"
-genai.configure(api_key=api_key)
-# Tady můžeš botovi nastavit instrukce (osobnost)
-model = genai.GenerativeModel(
-    model_name='gemini-1.5-flash',
-    system_instruction="Jsi profesionální zákaznická podpora pro firmu MILION AI. Odpovídej věcně, srozumitelně a česky."
-)
+# KONFIGURACE GEMINI
+# Tvůj API klíč zůstává stejný
+API_KEY = "AIzaSyCCN6wiTllhBPtGR8G4E-TS1wql0zKPkuI"
+genai.configure(api_key=API_KEY)
 
-# Nastavení šablon - hledá index.html ve složce templates
+# Tady definujeme model bez "beta" názvů, aby to neházelo 404
+model = genai.GenerativeModel('gemini-1.5-flash')
+
+# Nastavení složky pro HTML
 templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
@@ -39,15 +38,17 @@ async def chat(request: Request):
         if not user_message:
             return JSONResponse(content={"reply": "Nic jsi nenapsal..."}, status_code=400)
         
-        # Volání Gemini
-        response = model.generate_content(user_message)
+        # Volání Gemini s tvými instrukcemi
+        prompt = f"Jsi profesionální asistent firmy MILION AI. Odpovídej stručně a česky. Dotaz: {user_message}"
+        response = model.generate_content(prompt)
+        
         return {"reply": response.text}
     except Exception as e:
         print(f"DEBUG CHYBA: {e}")
-        return JSONResponse(content={"reply": f"Chyba: {str(e)}"}, status_code=500)
+        return JSONResponse(content={"reply": f"Chyba na serveru: {str(e)}"}, status_code=500)
 
 if __name__ == "__main__":
     import uvicorn
-    # Render port
+    # Render port - automaticky si vezme správný port od Renderu
     port = int(os.environ.get("PORT", 10000))
     uvicorn.run(app, host="0.0.0.0", port=port)
