@@ -1,4 +1,5 @@
-requirements.txt
 fastapi
-groq
 uvicorn
+google-generativeai
+python-dotenv
+jinja2
